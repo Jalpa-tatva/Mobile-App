@@ -80,7 +80,7 @@ function App() {
     const unsubscribe = messaging().onMessage(async (remoteMessage) => {
       const { notification, data } = remoteMessage;
       const fromss = data?.fromss;
-      console.log("Received foreground message:", remoteMessage);
+     
       const foreground = silentNotification(fromss);
 
       // Only show notification if not silent
