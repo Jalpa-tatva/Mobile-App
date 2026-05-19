@@ -1,0 +1,1579 @@
+diff --git a/node_modules/react-native-calendars/src/agenda/index.d.ts b/node_modules/react-native-calendars/src/agenda/index.d.ts
+index 9e684e3..bc2c936 100644
+--- a/node_modules/react-native-calendars/src/agenda/index.d.ts
++++ b/node_modules/react-native-calendars/src/agenda/index.d.ts
+@@ -51,7 +51,7 @@ export default class Agenda extends Component<AgendaProps, State> {
+         onCalendarToggled: PropTypes.Requireable<(...args: any[]) => any>;
+         onDayChange: PropTypes.Requireable<(...args: any[]) => any>;
+         renderKnob: PropTypes.Requireable<(...args: any[]) => any>;
+-        renderList: PropTypes.Requireable<(...args: any[]) => any>;
++        renderList?: PropTypes.Requireable<(...args: any[]) => any>;
+         selected: PropTypes.Requireable<any>;
+         hideKnob: PropTypes.Requireable<boolean>;
+         showClosingKnob: PropTypes.Requireable<boolean>;
+diff --git a/node_modules/react-native-calendars/src/agenda/index.js b/node_modules/react-native-calendars/src/agenda/index.js
+index 30c113a..19b823c 100644
+--- a/node_modules/react-native-calendars/src/agenda/index.js
++++ b/node_modules/react-native-calendars/src/agenda/index.js
+@@ -2,14 +2,17 @@ import isFunction from 'lodash/isFunction';
+ import PropTypes from 'prop-types';
+ import XDate from 'xdate';
+ import memoize from 'memoize-one';
+-import React, { Component } from 'react';
+-import { View, Dimensions, Animated } from 'react-native';
+-import { extractCalendarListProps, extractReservationListProps } from '../componentUpdater';
+-import { xdateToData, toMarkingFormat } from '../interface';
+-import { sameDate, sameMonth } from '../dateutils';
+-import { AGENDA_CALENDAR_KNOB } from '../testIDs';
+-import { VelocityTracker } from '../velocityTracker';
+-import { getCalendarDateString } from '../services';
++import React, {Component} from 'react';
++import {View, Dimensions, Animated} from 'react-native';
++import {
++  extractCalendarListProps,
++  extractReservationListProps,
++} from '../componentUpdater';
++import {xdateToData, toMarkingFormat} from '../interface';
++import {sameDate, sameMonth} from '../dateutils';
++import {AGENDA_CALENDAR_KNOB} from '../testIDs';
++import {VelocityTracker} from '../velocityTracker';
++import {getCalendarDateString} from '../services';
+ import styleConstructor from './style';
+ import WeekDaysNames from '../commons/WeekDaysNames';
+ import CalendarList from '../calendar-list';
+@@ -24,308 +27,390 @@ const KNOB_HEIGHT = 24;
+  * @gif: https://github.com/wix/react-native-calendars/blob/master/demo/assets/agenda.gif
+  */
+ class Agenda extends Component {
+-    static displayName = 'Agenda';
+-    static propTypes = {
+-        ...CalendarList.propTypes,
+-        ...ReservationList.propTypes,
+-        items: PropTypes.object,
+-        style: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.number]),
+-        loadItemsForMonth: PropTypes.func,
+-        onCalendarToggled: PropTypes.func,
+-        onDayChange: PropTypes.func,
+-        renderKnob: PropTypes.func,
+-        renderList: PropTypes.func,
+-        selected: PropTypes.any,
+-        hideKnob: PropTypes.bool,
+-        showClosingKnob: PropTypes.bool
++  static displayName = 'Agenda';
++  static propTypes = {
++    ...CalendarList.propTypes,
++    ...ReservationList.propTypes,
++    items: PropTypes.object,
++    style: PropTypes.oneOfType([
++      PropTypes.object,
++      PropTypes.array,
++      PropTypes.number,
++    ]),
++    loadItemsForMonth: PropTypes.func,
++    onCalendarToggled: PropTypes.func,
++    onDayChange: PropTypes.func,
++    renderKnob: PropTypes.func,
++    renderList: PropTypes.func,
++    selected: PropTypes.any,
++    hideKnob: PropTypes.bool,
++    showClosingKnob: PropTypes.bool,
++  };
++  style;
++  viewHeight;
++  viewWidth;
++  scrollTimeout;
++  headerState;
++  currentMonth;
++  knobTracker;
++  _isMounted;
++  scrollPad = React.createRef();
++  calendar = React.createRef();
++  knob = React.createRef();
++  list = React.createRef();
++  constructor(props) {
++    super(props);
++    this.style = styleConstructor(props.theme);
++    const windowSize = Dimensions.get('window');
++    this.viewHeight = windowSize.height;
++    this.viewWidth = windowSize.width;
++    this.scrollTimeout = undefined;
++    this.headerState = 'idle';
++    this.state = {
++      scrollY: new Animated.Value(0),
++      calendarIsReady: false,
++      calendarScrollable: false,
++      firstReservationLoad: false,
++      selectedDay: this.getSelectedDate(props.selected),
++      topDay: this.getSelectedDate(props.selected),
+     };
+-    style;
+-    viewHeight;
+-    viewWidth;
+-    scrollTimeout;
+-    headerState;
+-    currentMonth;
+-    knobTracker;
+-    _isMounted;
+-    scrollPad = React.createRef();
+-    calendar = React.createRef();
+-    knob = React.createRef();
+-    list = React.createRef();
+-    constructor(props) {
+-        super(props);
+-        this.style = styleConstructor(props.theme);
+-        const windowSize = Dimensions.get('window');
+-        this.viewHeight = windowSize.height;
+-        this.viewWidth = windowSize.width;
+-        this.scrollTimeout = undefined;
+-        this.headerState = 'idle';
+-        this.state = {
+-            scrollY: new Animated.Value(0),
+-            calendarIsReady: false,
+-            calendarScrollable: false,
+-            firstReservationLoad: false,
+-            selectedDay: this.getSelectedDate(props.selected),
+-            topDay: this.getSelectedDate(props.selected)
+-        };
+-        this.currentMonth = this.state.selectedDay.clone();
+-        this.knobTracker = new VelocityTracker();
+-        this.state.scrollY.addListener(({ value }) => this.knobTracker.add(value));
++    this.currentMonth = this.state.selectedDay.clone();
++    this.knobTracker = new VelocityTracker();
++    this.state.scrollY.addListener(({value}) => this.knobTracker.add(value));
++  }
++  componentDidMount() {
++    this._isMounted = true;
++    this.loadReservations(this.props);
++  }
++  componentWillUnmount() {
++    this._isMounted = false;
++    this.state.scrollY.removeAllListeners();
++  }
++  componentDidUpdate(prevProps, prevState) {
++    const newSelectedDate = this.getSelectedDate(this.props.selected);
++    if (!sameDate(newSelectedDate, prevState.selectedDay)) {
++      const prevSelectedDate = this.getSelectedDate(prevProps.selected);
++      if (!sameDate(newSelectedDate, prevSelectedDate)) {
++        this.setState({selectedDay: newSelectedDate});
++        this.calendar?.current?.scrollToDay(
++          newSelectedDate,
++          this.calendarOffset(),
++          true,
++        );
++      }
++    } else if (!prevProps.items) {
++      this.loadReservations(this.props);
+     }
+-    componentDidMount() {
+-        this._isMounted = true;
+-        this.loadReservations(this.props);
++  }
++  static getDerivedStateFromProps(nextProps) {
++    if (nextProps.items) {
++      return {firstReservationLoad: false};
+     }
+-    componentWillUnmount() {
+-        this._isMounted = false;
+-        this.state.scrollY.removeAllListeners();
++    return null;
++  }
++  getSelectedDate(date) {
++    return date ? new XDate(date) : new XDate(true);
++  }
++  calendarOffset() {
++    return 96 - this.viewHeight / 2;
++  }
++  initialScrollPadPosition = () => {
++    return Math.max(0, this.viewHeight - HEADER_HEIGHT);
++  };
++  setScrollPadPosition = (y, animated) => {
++    if (this.scrollPad?.current?.scrollTo) {
++      this.scrollPad.current.scrollTo({x: 0, y, animated});
++    } else {
++      // Support for RN O.61 (Expo 37)
++      this.scrollPad?.current?.getNode().scrollTo({x: 0, y, animated});
+     }
+-    componentDidUpdate(prevProps, prevState) {
+-        const newSelectedDate = this.getSelectedDate(this.props.selected);
+-        if (!sameDate(newSelectedDate, prevState.selectedDay)) {
+-            const prevSelectedDate = this.getSelectedDate(prevProps.selected);
+-            if (!sameDate(newSelectedDate, prevSelectedDate)) {
+-                this.setState({ selectedDay: newSelectedDate });
+-                this.calendar?.current?.scrollToDay(newSelectedDate, this.calendarOffset(), true);
+-            }
+-        }
+-        else if (!prevProps.items) {
+-            this.loadReservations(this.props);
+-        }
++  };
++  toggleCalendarPosition = open => {
++    const maxY = this.initialScrollPadPosition();
++    this.setScrollPadPosition(open ? 0 : maxY, true);
++    this.enableCalendarScrolling(open);
++  };
++  enableCalendarScrolling(enable = true) {
++    this.setState({calendarScrollable: enable});
++    this.props.onCalendarToggled?.(enable);
++    // Enlarge calendarOffset here as a workaround on iOS to force repaint.
++    // Otherwise the month after current one or before current one remains invisible.
++    // The problem is caused by overflow: 'hidden' style, which we need for dragging
++    // to be performant.
++    // Another working solution for this bug would be to set removeClippedSubviews={false}
++    // in CalendarList listView, but that might impact performance when scrolling
++    // month list in expanded CalendarList.
++    // Further info https://github.com/facebook/react-native/issues/1831
++    this.calendar?.current?.scrollToDay(
++      this.state.selectedDay,
++      this.calendarOffset() + 1,
++      true,
++    );
++  }
++  loadReservations(props) {
++    if (
++      (!props.items || !Object.keys(props.items).length) &&
++      !this.state.firstReservationLoad
++    ) {
++      this.setState({firstReservationLoad: true}, () => {
++        this.props.loadItemsForMonth?.(xdateToData(this.state.selectedDay));
++      });
+     }
+-    static getDerivedStateFromProps(nextProps) {
+-        if (nextProps.items) {
+-            return { firstReservationLoad: false };
+-        }
+-        return null;
+-    }
+-    getSelectedDate(date) {
+-        return date ? new XDate(date) : new XDate(true);
++  }
++  onDayPress = d => {
++    this.chooseDay(d, !this.state.calendarScrollable);
++  };
++  chooseDay(d, optimisticScroll) {
++    const day = new XDate(d.dateString);
++    this.setState({
++      calendarScrollable: false,
++      selectedDay: day.clone(),
++    });
++    this.props.onCalendarToggled?.(false);
++    if (!optimisticScroll) {
++      this.setState({topDay: day.clone()});
+     }
+-    calendarOffset() {
+-        return 96 - this.viewHeight / 2;
++    this.setScrollPadPosition(this.initialScrollPadPosition(), true);
++    this.calendar?.current?.scrollToDay(day, this.calendarOffset(), true);
++    this.props.loadItemsForMonth?.(xdateToData(day));
++    this.props.onDayPress?.(xdateToData(day));
++  }
++  generateMarkings = memoize((selectedDay, markedDates, items) => {
++    if (!markedDates) {
++      markedDates = {};
++      if (items) {
++        Object.keys(items).forEach(key => {
++          if (items[key] && items[key].length) {
++            markedDates[key] = {marked: true};
++          }
++        });
++      }
+     }
+-    initialScrollPadPosition = () => {
+-        return Math.max(0, this.viewHeight - HEADER_HEIGHT);
+-    };
+-    setScrollPadPosition = (y, animated) => {
+-        if (this.scrollPad?.current?.scrollTo) {
+-            this.scrollPad.current.scrollTo({ x: 0, y, animated });
+-        }
+-        else {
+-            // Support for RN O.61 (Expo 37)
+-            this.scrollPad?.current?.getNode().scrollTo({ x: 0, y, animated });
+-        }
++    const key = toMarkingFormat(selectedDay);
++    return {
++      ...markedDates,
++      [key]: {...(markedDates[key] || {}), ...{selected: true}},
+     };
+-    toggleCalendarPosition = (open) => {
+-        const maxY = this.initialScrollPadPosition();
+-        this.setScrollPadPosition(open ? 0 : maxY, true);
+-        this.enableCalendarScrolling(open);
+-    };
+-    enableCalendarScrolling(enable = true) {
+-        this.setState({ calendarScrollable: enable });
+-        this.props.onCalendarToggled?.(enable);
+-        // Enlarge calendarOffset here as a workaround on iOS to force repaint.
+-        // Otherwise the month after current one or before current one remains invisible.
+-        // The problem is caused by overflow: 'hidden' style, which we need for dragging
+-        // to be performant.
+-        // Another working solution for this bug would be to set removeClippedSubviews={false}
+-        // in CalendarList listView, but that might impact performance when scrolling
+-        // month list in expanded CalendarList.
+-        // Further info https://github.com/facebook/react-native/issues/1831
+-        this.calendar?.current?.scrollToDay(this.state.selectedDay, this.calendarOffset() + 1, true);
+-    }
+-    loadReservations(props) {
+-        if ((!props.items || !Object.keys(props.items).length) && !this.state.firstReservationLoad) {
+-            this.setState({ firstReservationLoad: true }, () => {
+-                this.props.loadItemsForMonth?.(xdateToData(this.state.selectedDay));
+-            });
+-        }
++  });
++  onScrollPadLayout = () => {
++    // When user touches knob, the actual component that receives touch events is a ScrollView.
++    // It needs to be scrolled to the bottom, so that when user moves finger downwards,
++    // scroll position actually changes (it would stay at 0, when scrolled to the top).
++    this.setScrollPadPosition(this.initialScrollPadPosition(), false);
++    // delay rendering calendar in full height because otherwise it still flickers sometimes
++    setTimeout(() => this.setState({calendarIsReady: true}), 0);
++  };
++  onCalendarListLayout = () => {
++    this.calendar?.current?.scrollToDay(
++      this.state.selectedDay,
++      this.calendarOffset(),
++      false,
++    );
++  };
++  onLayout = event => {
++    this.viewHeight = event.nativeEvent.layout.height;
++    this.viewWidth = event.nativeEvent.layout.width;
++    this.forceUpdate();
++  };
++  onTouchStart = () => {
++    this.headerState = 'touched';
++    this.knob?.current?.setNativeProps({style: {opacity: 0.5}});
++  };
++  onTouchEnd = () => {
++    this.knob?.current?.setNativeProps({style: {opacity: 1}});
++    if (this.headerState === 'touched') {
++      const isOpen = this.state.calendarScrollable;
++      this.toggleCalendarPosition(!isOpen);
+     }
+-    onDayPress = (d) => {
+-        this.chooseDay(d, !this.state.calendarScrollable);
+-    };
+-    chooseDay(d, optimisticScroll) {
+-        const day = new XDate(d.dateString);
+-        this.setState({
+-            calendarScrollable: false,
+-            selectedDay: day.clone()
+-        });
+-        this.props.onCalendarToggled?.(false);
+-        if (!optimisticScroll) {
+-            this.setState({ topDay: day.clone() });
++    this.headerState = 'idle';
++  };
++  onStartDrag = () => {
++    this.headerState = 'dragged';
++    this.knobTracker.reset();
++  };
++  onSnapAfterDrag = e => {
++    // on Android onTouchEnd is not called if dragging was started
++    this.onTouchEnd();
++    const currentY = e.nativeEvent.contentOffset.y;
++    this.knobTracker.add(currentY);
++    const projectedY = currentY + this.knobTracker.estimateSpeed() * 250; /*ms*/
++    const maxY = this.initialScrollPadPosition();
++    const snapY = projectedY > maxY / 2 ? maxY : 0;
++    this.setScrollPadPosition(snapY, true);
++    this.enableCalendarScrolling(snapY === 0);
++  };
++  onVisibleMonthsChange = months => {
++    this.props.onVisibleMonthsChange?.(months);
++    if (this.props.items && !this.state.firstReservationLoad) {
++      if (this.scrollTimeout) {
++        clearTimeout(this.scrollTimeout);
++      }
++      this.scrollTimeout = setTimeout(() => {
++        if (this._isMounted) {
++          this.props.loadItemsForMonth?.(months[0]);
+         }
+-        this.setScrollPadPosition(this.initialScrollPadPosition(), true);
+-        this.calendar?.current?.scrollToDay(day, this.calendarOffset(), true);
+-        this.props.loadItemsForMonth?.(xdateToData(day));
+-        this.props.onDayPress?.(xdateToData(day));
++      }, 200);
+     }
+-    generateMarkings = memoize((selectedDay, markedDates, items) => {
+-        if (!markedDates) {
+-            markedDates = {};
+-            if (items) {
+-                Object.keys(items).forEach(key => {
+-                    if (items[key] && items[key].length) {
+-                        markedDates[key] = { marked: true };
+-                    }
+-                });
+-            }
+-        }
+-        const key = toMarkingFormat(selectedDay);
+-        return { ...markedDates, [key]: { ...(markedDates[key] || {}), ...{ selected: true } } };
+-    });
+-    onScrollPadLayout = () => {
+-        // When user touches knob, the actual component that receives touch events is a ScrollView.
+-        // It needs to be scrolled to the bottom, so that when user moves finger downwards,
+-        // scroll position actually changes (it would stay at 0, when scrolled to the top).
+-        this.setScrollPadPosition(this.initialScrollPadPosition(), false);
+-        // delay rendering calendar in full height because otherwise it still flickers sometimes
+-        setTimeout(() => this.setState({ calendarIsReady: true }), 0);
+-    };
+-    onCalendarListLayout = () => {
+-        this.calendar?.current?.scrollToDay(this.state.selectedDay, this.calendarOffset(), false);
+-    };
+-    onLayout = (event) => {
+-        this.viewHeight = event.nativeEvent.layout.height;
+-        this.viewWidth = event.nativeEvent.layout.width;
+-        this.forceUpdate();
+-    };
+-    onTouchStart = () => {
+-        this.headerState = 'touched';
+-        this.knob?.current?.setNativeProps({ style: { opacity: 0.5 } });
+-    };
+-    onTouchEnd = () => {
+-        this.knob?.current?.setNativeProps({ style: { opacity: 1 } });
+-        if (this.headerState === 'touched') {
+-            const isOpen = this.state.calendarScrollable;
+-            this.toggleCalendarPosition(!isOpen);
+-        }
+-        this.headerState = 'idle';
+-    };
+-    onStartDrag = () => {
+-        this.headerState = 'dragged';
+-        this.knobTracker.reset();
+-    };
+-    onSnapAfterDrag = (e) => {
+-        // on Android onTouchEnd is not called if dragging was started
+-        this.onTouchEnd();
+-        const currentY = e.nativeEvent.contentOffset.y;
+-        this.knobTracker.add(currentY);
+-        const projectedY = currentY + this.knobTracker.estimateSpeed() * 250; /*ms*/
+-        const maxY = this.initialScrollPadPosition();
+-        const snapY = projectedY > maxY / 2 ? maxY : 0;
+-        this.setScrollPadPosition(snapY, true);
+-        this.enableCalendarScrolling(snapY === 0);
+-    };
+-    onVisibleMonthsChange = (months) => {
+-        this.props.onVisibleMonthsChange?.(months);
+-        if (this.props.items && !this.state.firstReservationLoad) {
+-            if (this.scrollTimeout) {
+-                clearTimeout(this.scrollTimeout);
+-            }
+-            this.scrollTimeout = setTimeout(() => {
+-                if (this._isMounted) {
+-                    this.props.loadItemsForMonth?.(months[0]);
+-                }
+-            }, 200);
+-        }
+-    };
+-    onDayChange = (day) => {
+-        const withAnimation = sameMonth(day, this.state.selectedDay);
+-        this.calendar?.current?.scrollToDay(day, this.calendarOffset(), withAnimation);
+-        this.setState({ selectedDay: day });
+-        this.props.onDayChange?.(xdateToData(day));
+-    };
+-    renderReservations() {
+-        const reservationListProps = extractReservationListProps(this.props);
+-        if (isFunction(this.props.renderList)) {
+-            return this.props.renderList({
+-                ...reservationListProps,
+-                selectedDay: this.state.selectedDay,
+-                topDay: this.state.topDay,
+-                onDayChange: this.onDayChange
+-            });
+-        }
+-        return (<ReservationList {...reservationListProps} ref={this.list} selectedDay={this.state.selectedDay} topDay={this.state.topDay} onDayChange={this.onDayChange}/>);
++  };
++  onDayChange = day => {
++    const withAnimation = sameMonth(day, this.state.selectedDay);
++    this.calendar?.current?.scrollToDay(
++      day,
++      this.calendarOffset(),
++      withAnimation,
++    );
++    this.setState({selectedDay: day});
++    this.props.onDayChange?.(xdateToData(day));
++  };
++  renderReservations() {
++    const reservationListProps = extractReservationListProps(this.props);
++    if (isFunction(this.props.renderList)) {
++      return this.props.renderList({
++        ...reservationListProps,
++        selectedDay: this.state.selectedDay,
++        topDay: this.state.topDay,
++        onDayChange: this.onDayChange,
++      });
+     }
+-    renderCalendarList() {
+-        const { markedDates, items } = this.props;
+-        const shouldHideExtraDays = this.state.calendarScrollable ? this.props.hideExtraDays : false;
+-        const calendarListProps = extractCalendarListProps(this.props);
+-        return (<CalendarList {...calendarListProps} ref={this.calendar} current={getCalendarDateString(this.currentMonth.toString())} markedDates={this.generateMarkings(this.state.selectedDay, markedDates, items)} calendarWidth={this.viewWidth} scrollEnabled={this.state.calendarScrollable} hideExtraDays={shouldHideExtraDays} onLayout={this.onCalendarListLayout} onDayPress={this.onDayPress} onVisibleMonthsChange={this.onVisibleMonthsChange}/>);
++    console.log('selectedDay', this.props.selected);
++
++    return (
++      <ReservationList
++        {...reservationListProps}
++        ref={this.list}
++        selectedDay={this.state.selectedDay}
++        currentDate={this.props.selected}
++        topDay={this.state.topDay}
++        onDayChange={this.onDayChange}
++      />
++    );
++  }
++  renderCalendarList() {
++    const {markedDates, items} = this.props;
++    const shouldHideExtraDays = this.state.calendarScrollable
++      ? this.props.hideExtraDays
++      : false;
++    const calendarListProps = extractCalendarListProps(this.props);
++    return (
++      <CalendarList
++        {...calendarListProps}
++        ref={this.calendar}
++        current={getCalendarDateString(this.currentMonth.toString())}
++        markedDates={this.generateMarkings(
++          this.state.selectedDay,
++          markedDates,
++          items,
++        )}
++        calendarWidth={this.viewWidth}
++        scrollEnabled={this.state.calendarScrollable}
++        hideExtraDays={shouldHideExtraDays}
++        onLayout={this.onCalendarListLayout}
++        onDayPress={this.onDayPress}
++        onVisibleMonthsChange={this.onVisibleMonthsChange}
++      />
++    );
++  }
++  renderKnob() {
++    const {showClosingKnob, hideKnob, renderKnob} = this.props;
++    let knob = <View style={this.style.knobContainer} />;
++    if (!hideKnob) {
++      const knobView = renderKnob ? (
++        renderKnob()
++      ) : (
++        <View style={this.style.knob} />
++      );
++      knob =
++        !this.state.calendarScrollable || showClosingKnob ? (
++          <View style={this.style.knobContainer}>
++            <View ref={this.knob}>{knobView}</View>
++          </View>
++        ) : null;
+     }
+-    renderKnob() {
+-        const { showClosingKnob, hideKnob, renderKnob } = this.props;
+-        let knob = <View style={this.style.knobContainer}/>;
+-        if (!hideKnob) {
+-            const knobView = renderKnob ? renderKnob() : <View style={this.style.knob}/>;
+-            knob = !this.state.calendarScrollable || showClosingKnob ? (<View style={this.style.knobContainer}>
+-          <View ref={this.knob}>{knobView}</View>
+-        </View>) : null;
+-        }
+-        return knob;
++    return knob;
++  }
++  renderWeekDaysNames = () => {
++    return (
++      <WeekDaysNames
++        firstDay={this.props.firstDay}
++        style={this.style.dayHeader}
++      />
++    );
++  };
++  renderWeekNumbersSpace = () => {
++    return this.props.showWeekNumbers && <View style={this.style.dayHeader} />;
++  };
++  render() {
++    const {hideKnob, style, testID} = this.props;
++    const agendaHeight = this.initialScrollPadPosition();
++    const weekdaysStyle = [
++      this.style.weekdays,
++      {
++        opacity: this.state.scrollY.interpolate({
++          inputRange: [agendaHeight - HEADER_HEIGHT, agendaHeight],
++          outputRange: [0, 1],
++          extrapolate: 'clamp',
++        }),
++        transform: [
++          {
++            translateY: this.state.scrollY.interpolate({
++              inputRange: [
++                Math.max(0, agendaHeight - HEADER_HEIGHT),
++                agendaHeight,
++              ],
++              outputRange: [-HEADER_HEIGHT, 0],
++              extrapolate: 'clamp',
++            }),
++          },
++        ],
++      },
++    ];
++    const headerTranslate = this.state.scrollY.interpolate({
++      inputRange: [0, agendaHeight],
++      outputRange: [agendaHeight, 0],
++      extrapolate: 'clamp',
++    });
++    const contentTranslate = this.state.scrollY.interpolate({
++      inputRange: [0, agendaHeight],
++      outputRange: [0, agendaHeight / 2],
++      extrapolate: 'clamp',
++    });
++    const headerStyle = [
++      this.style.header,
++      {
++        bottom: agendaHeight,
++        transform: [{translateY: headerTranslate}],
++      },
++    ];
++    if (!this.state.calendarIsReady) {
++      // limit header height until everything is setup for calendar dragging
++      headerStyle.push({height: 0});
++      // fill header with appStyle.calendarBackground background to reduce flickering
++      weekdaysStyle.push({height: HEADER_HEIGHT});
+     }
+-    renderWeekDaysNames = () => {
+-        return (<WeekDaysNames firstDay={this.props.firstDay} style={this.style.dayHeader}/>);
+-    };
+-    renderWeekNumbersSpace = () => {
+-        return this.props.showWeekNumbers && <View style={this.style.dayHeader}/>;
++    const openCalendarScrollPadPosition =
++      !hideKnob && this.state.calendarScrollable && this.props.showClosingKnob
++        ? agendaHeight + HEADER_HEIGHT
++        : 0;
++    const shouldAllowDragging = !hideKnob && !this.state.calendarScrollable;
++    const scrollPadPosition =
++      (shouldAllowDragging ? HEADER_HEIGHT : openCalendarScrollPadPosition) -
++      KNOB_HEIGHT;
++    const scrollPadStyle = {
++      height: KNOB_HEIGHT,
++      top: scrollPadPosition,
+     };
+-    render() {
+-        const { hideKnob, style, testID } = this.props;
+-        const agendaHeight = this.initialScrollPadPosition();
+-        const weekdaysStyle = [
+-            this.style.weekdays,
+-            {
+-                opacity: this.state.scrollY.interpolate({
+-                    inputRange: [agendaHeight - HEADER_HEIGHT, agendaHeight],
+-                    outputRange: [0, 1],
+-                    extrapolate: 'clamp'
+-                }),
+-                transform: [
+-                    {
+-                        translateY: this.state.scrollY.interpolate({
+-                            inputRange: [Math.max(0, agendaHeight - HEADER_HEIGHT), agendaHeight],
+-                            outputRange: [-HEADER_HEIGHT, 0],
+-                            extrapolate: 'clamp'
+-                        })
+-                    }
+-                ]
+-            }
+-        ];
+-        const headerTranslate = this.state.scrollY.interpolate({
+-            inputRange: [0, agendaHeight],
+-            outputRange: [agendaHeight, 0],
+-            extrapolate: 'clamp'
+-        });
+-        const contentTranslate = this.state.scrollY.interpolate({
+-            inputRange: [0, agendaHeight],
+-            outputRange: [0, agendaHeight / 2],
+-            extrapolate: 'clamp'
+-        });
+-        const headerStyle = [
+-            this.style.header,
+-            {
+-                bottom: agendaHeight,
+-                transform: [{ translateY: headerTranslate }]
+-            }
+-        ];
+-        if (!this.state.calendarIsReady) {
+-            // limit header height until everything is setup for calendar dragging
+-            headerStyle.push({ height: 0 });
+-            // fill header with appStyle.calendarBackground background to reduce flickering
+-            weekdaysStyle.push({ height: HEADER_HEIGHT });
+-        }
+-        const openCalendarScrollPadPosition = !hideKnob && this.state.calendarScrollable && this.props.showClosingKnob ? agendaHeight + HEADER_HEIGHT : 0;
+-        const shouldAllowDragging = !hideKnob && !this.state.calendarScrollable;
+-        const scrollPadPosition = (shouldAllowDragging ? HEADER_HEIGHT : openCalendarScrollPadPosition) - KNOB_HEIGHT;
+-        const scrollPadStyle = {
+-            height: KNOB_HEIGHT,
+-            top: scrollPadPosition
+-        };
+-        return (<View testID={testID} onLayout={this.onLayout} style={[style, this.style.container]}>
++    return (
++      <View
++        testID={testID}
++        onLayout={this.onLayout}
++        style={[style, this.style.container]}>
+         <View style={this.style.reservations}>{this.renderReservations()}</View>
+         <Animated.View style={headerStyle}>
+-          <Animated.View style={[this.style.animatedContainer, { transform: [{ translateY: contentTranslate }] }]}>
++          <Animated.View
++            style={[
++              this.style.animatedContainer,
++              {transform: [{translateY: contentTranslate}]},
++            ]}>
+             {this.renderCalendarList()}
+           </Animated.View>
+           {this.renderKnob()}
+@@ -334,10 +419,30 @@ class Agenda extends Component {
+           {this.renderWeekNumbersSpace()}
+           {this.renderWeekDaysNames()}
+         </Animated.View>
+-        <Animated.ScrollView ref={this.scrollPad} style={[this.style.scrollPadStyle, scrollPadStyle]} overScrollMode="never" showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} scrollEventThrottle={8} scrollsToTop={false} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} onScrollBeginDrag={this.onStartDrag} onScrollEndDrag={this.onSnapAfterDrag} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: this.state.scrollY } } }], { useNativeDriver: true })}>
+-          <View testID={AGENDA_CALENDAR_KNOB} style={{ height: agendaHeight + KNOB_HEIGHT }} onLayout={this.onScrollPadLayout}/>
++        <Animated.ScrollView
++          ref={this.scrollPad}
++          style={[this.style.scrollPadStyle, scrollPadStyle]}
++          overScrollMode="never"
++          showsHorizontalScrollIndicator={false}
++          showsVerticalScrollIndicator={false}
++          scrollEventThrottle={8}
++          scrollsToTop={false}
++          onTouchStart={this.onTouchStart}
++          onTouchEnd={this.onTouchEnd}
++          onScrollBeginDrag={this.onStartDrag}
++          onScrollEndDrag={this.onSnapAfterDrag}
++          onScroll={Animated.event(
++            [{nativeEvent: {contentOffset: {y: this.state.scrollY}}}],
++            {useNativeDriver: true},
++          )}>
++          <View
++            testID={AGENDA_CALENDAR_KNOB}
++            style={{height: agendaHeight + KNOB_HEIGHT}}
++            onLayout={this.onScrollPadLayout}
++          />
+         </Animated.ScrollView>
+-      </View>);
+-    }
++      </View>
++    );
++  }
+ }
+ export default Agenda;
+diff --git a/node_modules/react-native-calendars/src/agenda/reservation-list/index.js b/node_modules/react-native-calendars/src/agenda/reservation-list/index.js
+index 3917729..84a1dc6 100644
+--- a/node_modules/react-native-calendars/src/agenda/reservation-list/index.js
++++ b/node_modules/react-native-calendars/src/agenda/reservation-list/index.js
+@@ -1,196 +1,241 @@
+ import isFunction from 'lodash/isFunction';
+ import PropTypes from 'prop-types';
+ import XDate from 'xdate';
+-import React, { Component } from 'react';
+-import { ActivityIndicator, View, FlatList } from 'react-native';
+-import { extractReservationProps } from '../../componentUpdater';
+-import { sameDate } from '../../dateutils';
+-import { toMarkingFormat } from '../../interface';
++import React, {Component} from 'react';
++import {ActivityIndicator, View, FlatList} from 'react-native';
++import {extractReservationProps} from '../../componentUpdater';
++import {sameDate} from '../../dateutils';
++import {toMarkingFormat} from '../../interface';
+ import styleConstructor from './style';
+ import Reservation from './reservation';
+ class ReservationList extends Component {
+-    static displayName = 'ReservationList';
+-    static propTypes = {
+-        ...Reservation.propTypes,
+-        items: PropTypes.object,
+-        selectedDay: PropTypes.instanceOf(XDate),
+-        topDay: PropTypes.instanceOf(XDate),
+-        onDayChange: PropTypes.func,
+-        showOnlySelectedDayItems: PropTypes.bool,
+-        renderEmptyData: PropTypes.func,
+-        onScroll: PropTypes.func,
+-        onScrollBeginDrag: PropTypes.func,
+-        onScrollEndDrag: PropTypes.func,
+-        onMomentumScrollBegin: PropTypes.func,
+-        onMomentumScrollEnd: PropTypes.func,
+-        refreshControl: PropTypes.element,
+-        refreshing: PropTypes.bool,
+-        onRefresh: PropTypes.func,
+-        reservationsKeyExtractor: PropTypes.func
++  static displayName = 'ReservationList';
++  static propTypes = {
++    ...Reservation.propTypes,
++    items: PropTypes.object,
++    selectedDay: PropTypes.instanceOf(XDate),
++    topDay: PropTypes.instanceOf(XDate),
++    onDayChange: PropTypes.func,
++    showOnlySelectedDayItems: PropTypes.bool,
++    renderEmptyData: PropTypes.func,
++    onScroll: PropTypes.func,
++    onScrollBeginDrag: PropTypes.func,
++    onScrollEndDrag: PropTypes.func,
++    onMomentumScrollBegin: PropTypes.func,
++    onMomentumScrollEnd: PropTypes.func,
++    refreshControl: PropTypes.element,
++    refreshing: PropTypes.bool,
++    onRefresh: PropTypes.func,
++    reservationsKeyExtractor: PropTypes.func,
++  };
++  static defaultProps = {
++    refreshing: false,
++    selectedDay: new XDate(true),
++  };
++  style;
++  heights;
++  selectedDay;
++  scrollOver;
++  list = React.createRef();
++  constructor(props) {
++    console.log('***PROPS***', props);
++
++    super(props);
++    this.style = styleConstructor(props.theme);
++    this.state = {
++      reservations: [],
+     };
+-    static defaultProps = {
+-        refreshing: false,
+-        selectedDay: new XDate(true)
+-    };
+-    style;
+-    heights;
+-    selectedDay;
+-    scrollOver;
+-    list = React.createRef();
+-    constructor(props) {
+-        super(props);
+-        this.style = styleConstructor(props.theme);
+-        this.state = {
+-            reservations: []
+-        };
+-        this.heights = [];
+-        this.selectedDay = props.selectedDay;
+-        this.scrollOver = true;
++    this.heights = [];
++    this.selectedDay = props.selectedDay;
++    this.scrollOver = true;
++  }
++  componentDidMount() {
++    this.updateDataSource(this.getReservations(this.props).reservations);
++  }
++  componentDidUpdate(prevProps) {
++    // Only update when topDay actually changes
++    if (this.props.topDay && !sameDate(prevProps.topDay, this.props.topDay)) {
++      this.setState({reservations: []}, () =>
++        this.updateReservations(this.props),
++      );
+     }
+-    componentDidMount() {
+-        this.updateDataSource(this.getReservations(this.props).reservations);
++
++    // Also handle items change
++    if (prevProps.items !== this.props.items) {
++      this.updateReservations(this.props);
+     }
+-    componentDidUpdate(prevProps) {
+-        if (this.props.topDay && prevProps.topDay && prevProps !== this.props) {
+-            if (!sameDate(prevProps.topDay, this.props.topDay)) {
+-                this.setState({ reservations: [] }, () => this.updateReservations(this.props));
+-            }
+-            else {
+-                this.updateReservations(this.props);
+-            }
+-        }
++  }
++
++  updateDataSource(reservations) {
++    this.setState({reservations});
++  }
++  updateReservations(props) {
++    const {selectedDay, showOnlySelectedDayItems} = props;
++    const reservations = this.getReservations(props);
++    if (
++      !showOnlySelectedDayItems &&
++      this.list &&
++      !sameDate(selectedDay, this.selectedDay)
++    ) {
++      let scrollPosition = 0;
++      for (let i = 0; i < reservations.scrollPosition; i++) {
++        scrollPosition += this.heights[i] || 0;
++      }
++      this.scrollOver = false;
++      this.list?.current?.scrollToOffset({
++        offset: scrollPosition,
++        animated: true,
++      });
+     }
+-    updateDataSource(reservations) {
+-        this.setState({ reservations });
++    this.selectedDay = selectedDay;
++    this.updateDataSource(reservations.reservations);
++  }
++  getReservationsForDay(iterator, props) {
++    const day = iterator.clone();
++    const res = props.items?.[toMarkingFormat(day)];
++    if (res && res.length) {
++      return res.map((reservation, i) => {
++        return {
++          reservation,
++          date: i ? undefined : day,
++        };
++      });
++    } else if (res) {
++      return [
++        {
++          date: iterator.clone(),
++        },
++      ];
++    } else {
++      return false;
+     }
+-    updateReservations(props) {
+-        const { selectedDay, showOnlySelectedDayItems } = props;
+-        const reservations = this.getReservations(props);
+-        if (!showOnlySelectedDayItems && this.list && !sameDate(selectedDay, this.selectedDay)) {
+-            let scrollPosition = 0;
+-            for (let i = 0; i < reservations.scrollPosition; i++) {
+-                scrollPosition += this.heights[i] || 0;
+-            }
+-            this.scrollOver = false;
+-            this.list?.current?.scrollToOffset({ offset: scrollPosition, animated: true });
+-        }
+-        this.selectedDay = selectedDay;
+-        this.updateDataSource(reservations.reservations);
++  }
++  getReservations(props) {
++    const {selectedDay, showOnlySelectedDayItems} = props;
++    if (!props.items || !selectedDay) {
++      return {reservations: [], scrollPosition: 0};
+     }
+-    getReservationsForDay(iterator, props) {
+-        const day = iterator.clone();
+-        const res = props.items?.[toMarkingFormat(day)];
+-        if (res && res.length) {
+-            return res.map((reservation, i) => {
+-                return {
+-                    reservation,
+-                    date: i ? undefined : day
+-                };
+-            });
+-        }
+-        else if (res) {
+-            return [
+-                {
+-                    date: iterator.clone()
+-                }
+-            ];
+-        }
+-        else {
+-            return false;
++    let reservations = [];
++    if (this.state.reservations && this.state.reservations.length) {
++      const iterator = this.state.reservations[0].date?.clone();
++      if (iterator) {
++        while (iterator.getTime() < selectedDay.getTime()) {
++          const res = this.getReservationsForDay(iterator, props);
++          if (!res) {
++            reservations = [];
++            break;
++          } else {
++            reservations = reservations.concat(res);
++          }
++          iterator.addDays(1);
+         }
++      }
+     }
+-    getReservations(props) {
+-        const { selectedDay, showOnlySelectedDayItems } = props;
+-        if (!props.items || !selectedDay) {
+-            return { reservations: [], scrollPosition: 0 };
+-        }
+-        let reservations = [];
+-        if (this.state.reservations && this.state.reservations.length) {
+-            const iterator = this.state.reservations[0].date?.clone();
+-            if (iterator) {
+-                while (iterator.getTime() < selectedDay.getTime()) {
+-                    const res = this.getReservationsForDay(iterator, props);
+-                    if (!res) {
+-                        reservations = [];
+-                        break;
+-                    }
+-                    else {
+-                        reservations = reservations.concat(res);
+-                    }
+-                    iterator.addDays(1);
+-                }
+-            }
+-        }
+-        const scrollPosition = reservations.length;
+-        const iterator = selectedDay.clone();
+-        if (showOnlySelectedDayItems) {
+-            const res = this.getReservationsForDay(iterator, props);
+-            if (res) {
+-                reservations = res;
+-            }
+-            iterator.addDays(1);
++    const scrollPosition = reservations.length;
++    const iterator = selectedDay.clone();
++    if (showOnlySelectedDayItems) {
++      const res = this.getReservationsForDay(iterator, props);
++      if (res) {
++        reservations = res;
++      }
++      iterator.addDays(1);
++    } else {
++      for (let i = 0; i < 31; i++) {
++        const res = this.getReservationsForDay(iterator, props);
++        if (res) {
++          reservations = reservations.concat(res);
+         }
+-        else {
+-            for (let i = 0; i < 31; i++) {
+-                const res = this.getReservationsForDay(iterator, props);
+-                if (res) {
+-                    reservations = reservations.concat(res);
+-                }
+-                iterator.addDays(1);
+-            }
+-        }
+-        return { reservations, scrollPosition };
++        iterator.addDays(1);
++      }
+     }
+-    onScroll = (event) => {
+-        const yOffset = event.nativeEvent.contentOffset.y;
+-        this.props.onScroll?.(yOffset);
+-        let topRowOffset = 0;
+-        let topRow;
+-        for (topRow = 0; topRow < this.heights.length; topRow++) {
+-            if (topRowOffset + this.heights[topRow] / 2 >= yOffset) {
+-                break;
+-            }
+-            topRowOffset += this.heights[topRow];
+-        }
+-        const row = this.state.reservations[topRow];
+-        if (!row)
+-            return;
+-        const day = row.date;
+-        if (day) {
+-            if (!sameDate(day, this.selectedDay) && this.scrollOver) {
+-                this.selectedDay = day.clone();
+-                this.props.onDayChange?.(day.clone());
+-            }
+-        }
+-    };
+-    onListTouch() {
+-        this.scrollOver = true;
++    return {reservations, scrollPosition};
++  }
++  onScroll = event => {
++    const yOffset = event.nativeEvent.contentOffset.y;
++    this.props.onScroll?.(yOffset);
++    let topRowOffset = 0;
++    let topRow;
++    for (topRow = 0; topRow < this.heights.length; topRow++) {
++      if (topRowOffset + this.heights[topRow] / 2 >= yOffset) {
++        break;
++      }
++      topRowOffset += this.heights[topRow];
+     }
+-    onRowLayoutChange(index, event) {
+-        this.heights[index] = event.nativeEvent.layout.height;
++    const row = this.state.reservations[topRow];
++    if (!row) return;
++    const day = row.date;
++    if (day) {
++      if (!sameDate(day, this.selectedDay) && this.scrollOver) {
++        this.selectedDay = day.clone();
++        this.props.onDayChange?.(day.clone());
++      }
+     }
+-    onMoveShouldSetResponderCapture = () => {
+-        this.onListTouch();
+-        return false;
+-    };
+-    renderRow = ({ item, index }) => {
+-        const reservationProps = extractReservationProps(this.props);
+-        return (<View onLayout={this.onRowLayoutChange.bind(this, index)}>
+-        <Reservation {...reservationProps} item={item.reservation} date={item.date}/>
+-      </View>);
+-    };
+-    keyExtractor = (item, index) => {
+-        return this.props.reservationsKeyExtractor?.(item, index) || `${item?.reservation?.day}${index}`;
+-    };
+-    render() {
+-        const { items, selectedDay, theme, style } = this.props;
+-        if (!items || selectedDay && !items[toMarkingFormat(selectedDay)]) {
+-            if (isFunction(this.props.renderEmptyData)) {
+-                return this.props.renderEmptyData?.();
+-            }
+-            return <ActivityIndicator style={this.style.indicator} color={theme?.indicatorColor}/>;
+-        }
+-        return (<FlatList ref={this.list} style={style} contentContainerStyle={this.style.content} data={this.state.reservations} renderItem={this.renderRow} keyExtractor={this.keyExtractor} showsVerticalScrollIndicator={false} scrollEventThrottle={200} onMoveShouldSetResponderCapture={this.onMoveShouldSetResponderCapture} onScroll={this.onScroll} refreshControl={this.props.refreshControl} refreshing={this.props.refreshing} onRefresh={this.props.onRefresh} onScrollBeginDrag={this.props.onScrollBeginDrag} onScrollEndDrag={this.props.onScrollEndDrag} onMomentumScrollBegin={this.props.onMomentumScrollBegin} onMomentumScrollEnd={this.props.onMomentumScrollEnd}/>);
++  };
++  onListTouch() {
++    this.scrollOver = true;
++  }
++  onRowLayoutChange(index, event) {
++    this.heights[index] = event.nativeEvent.layout.height;
++  }
++  onMoveShouldSetResponderCapture = () => {
++    this.onListTouch();
++    return false;
++  };
++
++  renderRow = ({item, index}) => {
++    console.log('========>', this.props);
++    const reservationProps = extractReservationProps(this.props);
++    return (
++      <View onLayout={this.onRowLayoutChange.bind(this, index)}>
++        <Reservation
++          {...reservationProps}
++          item={item.reservation}
++          date={item.date}
++          currentDate={this.props.currentDate}
++        />
++      </View>
++    );
++  };
++  keyExtractor = (item, index) => {
++    return (
++      this.props.reservationsKeyExtractor?.(item, index) ||
++      `${item?.reservation?.day}${index}`
++    );
++  };
++  render() {
++    const {items, selectedDay, theme, style} = this.props;
++    if (!items || (selectedDay && !items[toMarkingFormat(selectedDay)])) {
++      if (isFunction(this.props.renderEmptyData)) {
++        return this.props.renderEmptyData?.();
++      }
++      return (
++        <ActivityIndicator
++          style={this.style.indicator}
++          color={theme?.indicatorColor}
++        />
++      );
+     }
++    return (
++      <FlatList
++        ref={this.list}
++        style={style}
++        contentContainerStyle={this.style.content}
++        data={this.state.reservations}
++        renderItem={this.renderRow}
++        keyExtractor={this.keyExtractor}
++        showsVerticalScrollIndicator={false}
++        scrollEventThrottle={200}
++        onMoveShouldSetResponderCapture={this.onMoveShouldSetResponderCapture}
++        onScroll={this.onScroll}
++        refreshControl={this.props.refreshControl}
++        refreshing={this.props.refreshing}
++        onRefresh={this.props.onRefresh}
++        onScrollBeginDrag={this.props.onScrollBeginDrag}
++        onScrollEndDrag={this.props.onScrollEndDrag}
++        onMomentumScrollBegin={this.props.onMomentumScrollBegin}
++        onMomentumScrollEnd={this.props.onMomentumScrollEnd}
++      />
++    );
++  }
+ }
+ export default ReservationList;
+diff --git a/node_modules/react-native-calendars/src/agenda/reservation-list/reservation.js b/node_modules/react-native-calendars/src/agenda/reservation-list/reservation.js
+index bc1e2c0..72ac28c 100644
+--- a/node_modules/react-native-calendars/src/agenda/reservation-list/reservation.js
++++ b/node_modules/react-native-calendars/src/agenda/reservation-list/reservation.js
+@@ -1,88 +1,104 @@
+ import isFunction from 'lodash/isFunction';
+ import PropTypes from 'prop-types';
+-import React, { Component } from 'react';
+-import { View, Text } from 'react-native';
+-import { isToday } from '../../dateutils';
+-import { getDefaultLocale } from '../../services';
+-import { RESERVATION_DATE } from '../../testIDs';
++import React, {Component} from 'react';
++import {View, Text} from 'react-native';
++import {isToday} from '../../dateutils';
++import {getDefaultLocale} from '../../services';
++import {RESERVATION_DATE} from '../../testIDs';
+ import styleConstructor from './style';
++import moment from 'moment';
+ class Reservation extends Component {
+-    static displayName = 'Reservation';
+-    static propTypes = {
+-        date: PropTypes.any,
+-        item: PropTypes.any,
+-        theme: PropTypes.object,
+-        rowHasChanged: PropTypes.func,
+-        renderDay: PropTypes.func,
+-        renderItem: PropTypes.func,
+-        renderEmptyDate: PropTypes.func
+-    };
+-    style;
+-    constructor(props) {
+-        super(props);
+-        this.style = styleConstructor(props.theme);
+-    }
+-    shouldComponentUpdate(nextProps) {
+-        const d1 = this.props.date;
+-        const d2 = nextProps.date;
+-        const r1 = this.props.item;
+-        const r2 = nextProps.item;
+-        let changed = true;
+-        if (!d1 && !d2) {
+-            changed = false;
+-        }
+-        else if (d1 && d2) {
+-            if (d1.getTime() !== d2.getTime()) {
+-                changed = true;
+-            }
+-            else if (!r1 && !r2) {
+-                changed = false;
+-            }
+-            else if (r1 && r2) {
+-                if ((!d1 && !d2) || (d1 && d2)) {
+-                    if (isFunction(this.props.rowHasChanged)) {
+-                        changed = this.props.rowHasChanged(r1, r2);
+-                    }
+-                }
+-            }
++  static displayName = 'Reservation';
++  static propTypes = {
++    date: PropTypes.any,
++    item: PropTypes.any,
++    theme: PropTypes.object,
++    rowHasChanged: PropTypes.func,
++    renderDay: PropTypes.func,
++    renderItem: PropTypes.func,
++    renderEmptyDate: PropTypes.func,
++  };
++  style;
++  constructor(props) {
++    super(props);
++    this.style = styleConstructor(props.theme);
++  }
++  shouldComponentUpdate(nextProps) {
++    const d1 = this.props.date;
++    const d2 = nextProps.date;
++    const r1 = this.props.item;
++    const r2 = nextProps.item;
++    let changed = true;
++    if (!d1 && !d2) {
++      changed = false;
++    } else if (d1 && d2) {
++      if (d1.getTime() !== d2.getTime()) {
++        changed = true;
++      } else if (!r1 && !r2) {
++        changed = false;
++      } else if (r1 && r2) {
++        if ((!d1 && !d2) || (d1 && d2)) {
++          if (isFunction(this.props.rowHasChanged)) {
++            changed = this.props.rowHasChanged(r1, r2);
++          }
+         }
+-        return changed;
++      }
+     }
+-    renderDate() {
+-        const { item, date, renderDay } = this.props;
+-        if (isFunction(renderDay)) {
+-            return renderDay(date, item);
+-        }
+-        const today = date && isToday(date) ? this.style.today : undefined;
+-        const dayNames = getDefaultLocale().dayNamesShort;
+-        if (date) {
+-            return (<View style={this.style.day} testID={RESERVATION_DATE}>
++    return changed;
++  }
++  renderDate() {
++    const {item, date, renderDay} = this.props;
++    if (isFunction(renderDay)) {
++      return renderDay(date, item);
++    }
++    const today = date && isToday(date) ? this.style.today : undefined;
++    const dayNames = getDefaultLocale().dayNamesShort;
++
++    if (date) {
++      return (
++        <View style={this.style.day} testID={RESERVATION_DATE}>
+           <Text allowFontScaling={false} style={[this.style.dayNum, today]}>
+             {date.getDate()}
+           </Text>
+           <Text allowFontScaling={false} style={[this.style.dayText, today]}>
+             {dayNames ? dayNames[date.getDay()] : undefined}
+           </Text>
+-        </View>);
+-        }
+-        return <View style={this.style.day}/>;
++        </View>
++      );
+     }
+-    render() {
+-        const { item, date, renderItem, renderEmptyDate } = this.props;
+-        let content;
+-        if (item) {
+-            const firstItem = date ? true : false;
+-            if (isFunction(renderItem)) {
+-                content = renderItem(item, firstItem);
+-            }
+-        }
+-        else if (isFunction(renderEmptyDate)) {
+-            content = renderEmptyDate(date);
+-        }
+-        return (<View style={this.style.container}>
+-        {this.renderDate()}
+-        <View style={this.style.innerContainer}>{content}</View>
+-      </View>);
++    return <View style={this.style.day} />;
++  }
++  render() {
++    const {item, date, renderItem, renderEmptyDate} = this.props;
++    let content;
++    if (item) {
++      const firstItem = date ? true : false;
++      if (isFunction(renderItem)) {
++        content = renderItem(item, firstItem);
++      }
++    } else if (isFunction(renderEmptyDate)) {
++      content = renderEmptyDate(date);
+     }
++    const currentDate = moment(this?.props?.currentDate).format(
++      'ddd DD, MMM yyyy ',
++    );
++    return (
++      <View style={this.style.whiteBack}>
++        <View style={this.style.dateHeader}>
++          <View style={this.style.dateContainer}>
++            <View style={this.style.colorBack} />
++            <Text style={this.style.dateLbl}>{currentDate}</Text>
++          </View>
++          <Text style={{...this.style.dateLbl, ...this.style.endEventsSpace}}>
++            Events
++          </Text>
++        </View>
++        <View style={this.style.container}>
++          {/* {this.renderDate()} */}
++          <View style={this.style.innerContainer}>{content}</View>
++        </View>
++      </View>
++    );
++  }
+ }
+ export default Reservation;
+diff --git a/node_modules/react-native-calendars/src/agenda/reservation-list/style.js b/node_modules/react-native-calendars/src/agenda/reservation-list/style.js
+index e1dd50e..7202f70 100644
+--- a/node_modules/react-native-calendars/src/agenda/reservation-list/style.js
++++ b/node_modules/react-native-calendars/src/agenda/reservation-list/style.js
+@@ -1,40 +1,71 @@
+-import { StyleSheet } from 'react-native';
++import {StyleSheet} from 'react-native';
+ import * as defaultStyle from '../../style';
+ export default function styleConstructor(theme = {}) {
+-    const appStyle = { ...defaultStyle, ...theme };
+-    return StyleSheet.create({
+-        container: {
+-            flexDirection: 'row'
+-        },
+-        innerContainer: {
+-            flex: 1
+-        },
+-        dayNum: {
+-            fontSize: 28,
+-            fontWeight: '200',
+-            fontFamily: appStyle.textDayFontFamily,
+-            color: appStyle.agendaDayNumColor
+-        },
+-        dayText: {
+-            fontSize: 14,
+-            fontWeight: appStyle.textDayFontWeight,
+-            fontFamily: appStyle.textDayFontFamily,
+-            color: appStyle.agendaDayTextColor,
+-            backgroundColor: 'rgba(0,0,0,0)',
+-            marginTop: -5
+-        },
+-        day: {
+-            width: 63,
+-            alignItems: 'center',
+-            justifyContent: 'flex-start',
+-            marginTop: 32
+-        },
+-        today: {
+-            color: appStyle.agendaTodayColor
+-        },
+-        indicator: {
+-            marginTop: 80
+-        },
+-        ...(theme['stylesheet.agenda.list'] || {})
+-    });
++  const appStyle = {...defaultStyle, ...theme};
++  return StyleSheet.create({
++    container: {
++      flexDirection: 'row',
++    //   marginTop: 10,
++    },
++    dateContainer: {
++      flexDirection: 'row',
++      //   paddingVertical: 10,
++    },
++    whiteBack: {
++      backgroundColor: 'white',
++    },
++    colorBack: {
++      backgroundColor: '#19dab9',
++      width: 12,
++      height: 40,
++    },
++    dateLbl: {
++      fontWeight: '700',
++      fontFamily: appStyle.textDayFontFamily,
++      fontSize: 15,
++      marginLeft: 10,
++      alignSelf: 'center',
++      color: '#bfd3d9',
++    },
++    innerContainer: {
++      flex: 1,
++    },
++    endEventsSpace: {
++      marginRight: 10,
++    },
++    dayNum: {
++      fontSize: 28,
++      fontWeight: '200',
++      fontFamily: appStyle.textDayFontFamily,
++      color: appStyle.agendaDayNumColor,
++    },
++    dateHeader: {
++      flexDirection: 'row',
++      alignItems: 'center',
++      justifyContent: 'space-between',
++      marginBottom: 18,
++      backgroundColor: '#f8fafb',
++    },
++    dayText: {
++      fontSize: 14,
++      fontWeight: appStyle.textDayFontWeight,
++      fontFamily: appStyle.textDayFontFamily,
++      color: appStyle.agendaDayTextColor,
++      backgroundColor: 'rgba(0,0,0,0)',
++      marginTop: -5,
++    },
++    day: {
++      width: 63,
++      alignItems: 'center',
++      justifyContent: 'flex-start',
++      marginTop: 32,
++    },
++    today: {
++      color: appStyle.agendaTodayColor,
++    },
++    indicator: {
++      marginTop: 80,
++    },
++    ...(theme['stylesheet.agenda.list'] || {}),
++  });
+ }
+diff --git a/node_modules/react-native-calendars/src/agenda/style.js b/node_modules/react-native-calendars/src/agenda/style.js
+index 2a43247..38dfda8 100644
+--- a/node_modules/react-native-calendars/src/agenda/style.js
++++ b/node_modules/react-native-calendars/src/agenda/style.js
+@@ -1,54 +1,55 @@
+-import { StyleSheet } from 'react-native';
++import {StyleSheet} from 'react-native';
+ import * as defaultStyle from '../style';
+ import platformStyles from './platform-style';
+ export default function styleConstructor(theme = {}) {
+-    const appStyle = { ...defaultStyle, ...theme };
+-    const { knob, weekdays } = platformStyles(appStyle);
+-    return StyleSheet.create({
+-        container: {
+-            flex: 1,
+-            overflow: 'hidden'
+-        },
+-        animatedContainer: {
+-            flex: 1
+-        },
+-        knob,
+-        weekdays,
+-        header: {
+-            overflow: 'hidden',
+-            justifyContent: 'flex-end',
+-            position: 'absolute',
+-            height: '100%',
+-            width: '100%'
+-        },
+-        knobContainer: {
+-            flex: 1,
+-            position: 'absolute',
+-            left: 0,
+-            right: 0,
+-            height: 24,
+-            bottom: 0,
+-            alignItems: 'center',
+-            backgroundColor: appStyle.calendarBackground
+-        },
+-        dayHeader: {
+-            width: 32,
+-            textAlign: 'center',
+-            fontSize: appStyle.textDayHeaderFontSize,
+-            fontFamily: appStyle.textDayHeaderFontFamily,
+-            fontWeight: appStyle.textDayHeaderFontWeight,
+-            color: appStyle.textSectionTitleColor
+-        },
+-        reservations: {
+-            flex: 1,
+-            marginTop: 104,
+-            backgroundColor: appStyle.reservationsBackgroundColor || appStyle.backgroundColor //TODO: remove 2nd in V2
+-        },
+-        scrollPadStyle: {
+-            position: 'absolute',
+-            width: '100%',
+-            alignSelf: 'center'
+-        },
+-        ...(theme['stylesheet.agenda.main'] || {})
+-    });
++  const appStyle = {...defaultStyle, ...theme};
++  const {knob, weekdays} = platformStyles(appStyle);
++  return StyleSheet.create({
++    container: {
++      flex: 1,
++      overflow: 'hidden',
++    },
++    animatedContainer: {
++      flex: 1,
++    },
++    knob,
++    weekdays,
++    header: {
++      overflow: 'hidden',
++      justifyContent: 'flex-end',
++      position: 'absolute',
++      height: '100%',
++      width: '100%',
++    },
++    knobContainer: {
++      flex: 1,
++      position: 'absolute',
++      left: 0,
++      right: 0,
++      height: 24,
++      bottom: 0,
++      alignItems: 'center',
++      backgroundColor: appStyle.calendarBackground,
++    },
++    dayHeader: {
++      width: 32,
++      textAlign: 'center',
++      fontSize: appStyle.textDayHeaderFontSize,
++      fontFamily: appStyle.textDayHeaderFontFamily,
++      fontWeight: appStyle.textDayHeaderFontWeight,
++      color: appStyle.textSectionTitleColor,
++    },
++    reservations: {
++      flex: 1,
++      marginTop: 104,
++      // backgroundColor: appStyle.reservationsBackgroundColor || appStyle.backgroundColor //TODO: remove 2nd in V2
++      backgroundColor: 'white', //TODO: remove 2nd in V2
++    },
++    scrollPadStyle: {
++      position: 'absolute',
++      width: '100%',
++      alignSelf: 'center',
++    },
++    ...(theme['stylesheet.agenda.main'] || {}),
++  });
+ }

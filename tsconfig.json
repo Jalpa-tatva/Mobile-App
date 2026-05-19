@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    // "semi": [2, "never"],
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "checkJs": false,
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "jsx": "react-native",
+    "module": "es2015",
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "sourceMap": true,
+    "target": "esnext",
+    "lib": ["esnext"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@config/*": ["app/config/*"],
+      "@utils/*": ["app/utils/*"],
+      "@screens/*": ["app/screens/*"],
+      "@components/*": ["app/components/*"],
+      "@constants/*": ["app/constants/*"],
+      "@models/*": ["app/models/*"],
+      "@services/*": ["app/services/*"],
+      "@theme/*": ["app/theme/*"],
+      "@theme": ["app/theme"],
+      "@context/*": ["app/context/*"],
+      "@lang/*": ["app/i18n/*"],
+      "@lang": ["app/i18n"],
+      "@assets/*": ["assets/images/*"],
+      "@redux/*": ["app/redux/*"]
+    }
+  },
+  "exclude": ["node_modules"],
+  "include": ["index.js", "app", "test"]
+}

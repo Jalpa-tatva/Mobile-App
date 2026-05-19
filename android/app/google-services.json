@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "653044829090",
+    "project_id": "epionecare-e8809",
+    "storage_bucket": "epionecare-e8809.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653044829090:android:500456b34ae3b4045500fb",
+        "android_client_info": {
+          "package_name": "com.concursive.epionecares"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjEuFq9-Rn2qt4TakP_RXRyJ04mzMbo-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653044829090:android:bf23c617f7e20eab5500fb",
+        "android_client_info": {
+          "package_name": "com.concursive.epionecareslite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjEuFq9-Rn2qt4TakP_RXRyJ04mzMbo-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

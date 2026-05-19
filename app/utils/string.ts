@@ -1,0 +1,25 @@
+export const content = {
+  groups: {
+    groupsDetail: "groups_detail",
+    dispatch: "dispatch",
+    drawerStatus: "drawer_status",
+    chatDetail: "chat_detail",
+    tabStatus: "tab_status",
+    loginDetail: "login_detail",
+    profileDetail: "profile_detail",
+    memberDetail: "member_detail",
+    mapDetail: "map_detail",
+    dynamicTab: "dynamic_tab",
+  },
+  reducer_state: {
+    activeTab: "active_tab",
+    chatDetail: "chat_detail",
+    drawerStatus: "drawer_status",
+    groupsDetail: "groups_detail",
+    loginDetail: "login_detail",
+    memberDetail: "member_detail",
+    profileDetail: "profile_detail",
+    mapDetail: "map_detail",
+    dynamicTab: "dynamic_tab",
+  },
+};

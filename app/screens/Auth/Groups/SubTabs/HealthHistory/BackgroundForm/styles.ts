@@ -1,0 +1,182 @@
+import { StyleSheet } from "react-native";
+import { color, font, fontSize } from "@theme/index";
+
+export const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: color.white,
+  },
+  container: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: fontSize(2) },
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sectionTitle: {
+    marginTop: fontSize(4),
+    fontFamily: font.Poppins_Medium,
+    color: color.palette.black,
+    fontSize: fontSize(14),
+  },
+  section: {
+    // height: "100%",
+    marginTop: fontSize(8),
+    marginHorizontal: fontSize(10),
+    paddingHorizontal: 10,
+    // backgroundColor:'#d9d9d9',
+    shadowColor: "#000000",
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: {
+      height: 0,
+      width: 0,
+    },
+    backgroundColor: color.white,
+    paddingVertical: fontSize(10),
+    flexGrow: 1,
+    borderRadius: 10,
+    marginBottom: fontSize(60),
+  },
+  horizontalContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginVertical: fontSize(5),
+  },
+  input: {
+    // width: fontSize(120),
+    // backgroundColor: color.palette.lightGrey,
+    flex: 1,
+  },
+  darkInput: {
+    flex: 1,
+    backgroundColor: color.palette.lightGrey,
+    color: color.palette.black,
+  },
+  checkBoxContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: fontSize(5),
+  },
+  checkBoxLabel: {
+    fontSize: fontSize(16),
+    marginLeft: fontSize(10),
+  },
+  checkBoxSection: {
+    marginHorizontal: fontSize(15),
+    // flexDirection: "row",
+    justifyContent: "center",
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  radioButtonSection: {
+    marginHorizontal: fontSize(15),
+    flexDirection: "row",
+    justifyContent: "space-around",
+    flex: 1,
+  },
+  subHeading: {
+    marginTop: fontSize(5),
+    marginHorizontal: fontSize(10),
+  },
+  buttonContainer: {
+    marginVertical: fontSize(15),
+    // width: "50%",
+    alignItems: "center",
+  },
+  button: {
+    paddingHorizontal: fontSize(10),
+    backgroundColor: color.secondary,
+    marginTop: fontSize(5),
+    padding: fontSize(5),
+    height: fontSize(55),
+  },
+  cancel: {
+    width: "90%",
+    padding: fontSize(10),
+    paddingHorizontal: fontSize(10),
+    backgroundColor: color.red,
+    height: fontSize(45),
+    marginTop: fontSize(5),
+    // marginBottom: fontSize(10),
+  },
+  buttonTitle: {
+    fontFamily: font.Poppins_Bold,
+    color: color.palette.white,
+    fontSize: fontSize(14),
+  },
+  buttonEdit: {
+    paddingHorizontal: fontSize(10),
+    backgroundColor: color.palette.lightGrey,
+    marginTop: fontSize(5),
+    padding: fontSize(5),
+    height: fontSize(55),
+  },
+  buttonEditTitle: {
+    fontFamily: font.Poppins_Bold,
+    color: color.palette.black,
+    fontSize: fontSize(14),
+  },
+  statusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingHorizontal: fontSize(15),
+  },
+  status: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: fontSize(5),
+
+    backgroundColor: color.otherSplash,
+    // marginHorizontal: fontSize(12),
+    borderRadius: 8,
+    padding: fontSize(5),
+    height: fontSize(55),
+    // alignSelf: "center",
+  },
+  statusText: {
+    color: color.white,
+  },
+  dateTimePickerInputStyle: {
+    flex: 1,
+  },
+  dateText: {
+    color: "black",
+  },
+  radioContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  radioLabel: {
+    fontSize: fontSize(16),
+    marginRight: fontSize(5),
+  },
+  contentContainerStyle: {
+    paddingBottom: fontSize(20),
+    paddingTop: fontSize(640),
+  },
+  KeyboardAwareScrollViewStyle: {
+    width: undefined,
+    height: undefined,
+    paddingBottom: 50,
+    marginTop: 20,
+    marginHorizontal: 14,
+  },
+  maskInput: {
+    flex: 1,
+    // width: "100%",
+    fontSize: fontSize(13),
+    height: fontSize(42),
+    borderWidth: 1,
+    borderRadius: 4,
+    // paddingHorizontal: fontSize(5),
+    marginTop: fontSize(5),
+    paddingVertical: fontSize(12),
+    marginHorizontal: fontSize(15),
+    paddingHorizontal: fontSize(5),
+  },
+  spaceBottom: { paddingBottom: 80 },
+});
