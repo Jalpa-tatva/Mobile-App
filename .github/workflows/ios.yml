@@ -1,0 +1,44 @@
+name: iOS Build
+
+on:
+  push:
+    branches:
+      - main
+      - mobile_development
+
+  pull_request:
+    branches:
+      - main
+      - mobile_development
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: yarn
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build iOS
+        run: |
+          cd ios
+          xcodebuild \
+          -workspace EpioneCares.xcworkspace \
+          -scheme EpioneCares \
+          -sdk iphonesimulator \
+          -configuration Release \
+          build

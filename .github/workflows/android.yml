@@ -6,11 +6,6 @@ on:
       - main
       - mobile_development
 
-  pull_request:
-    branches:
-      - main
-      - mobile_development
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,12 +20,15 @@ jobs:
           node-version-file: package.json
 
       - name: Install Dependencies
-        run: yarn install
 
-      - name: Grant Execute Permission
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/app/epione-release.keystore
+
+      - name: Grant Permission
         run: chmod +x android/gradlew
 
-      - name: Build Android APK
+      - name: Build Release APK
         run: |
           cd android
           ./gradlew assembleRelease
