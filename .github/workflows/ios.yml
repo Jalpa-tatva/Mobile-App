@@ -68,7 +68,7 @@ jobs:
             -scheme EpioneCares \
             -sdk iphonesimulator \
             -configuration Release \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,name=Iphone 13pro max' \
             CODE_SIGNING_ALLOWED=NO \
             build
 
