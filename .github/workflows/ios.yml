@@ -34,10 +34,13 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Install CocoaPods
+       - name: Install Pods
         run: |
           cd ios
-          pod install
+          pod install --repo-update
+
+      - name: Clean Derived Data
+        run: rm -rf ~/Library/Developer/Xcode/DerivedData
 
       - name: Build iOS
         run: |
