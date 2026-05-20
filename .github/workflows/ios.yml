@@ -48,7 +48,7 @@ jobs:
 
       - name: Create ENV File
         run: |
-          echo "${{ secrets.ENV_FILES }}" > .env
+          echo "${{ secrets.ENV_FILES }}" > .env.production
 
       - name: Install CocoaPods
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build iOS
         env:
-          ENVFILE: .env
+          ENVFILE: .env.production
         run: |
           cd ios
 
