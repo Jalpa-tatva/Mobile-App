@@ -46,6 +46,9 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Set NODE_BINARY
+        run: echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
+
       - name: Create ENV File
         run: |
           echo "${{ secrets.ENV_FILES }}" > .env.production
