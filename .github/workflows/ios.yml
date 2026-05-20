@@ -22,10 +22,17 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version-file: package.json
+          node-version: 22.16.0
+          cache: yarn
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Install Dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
       - name: Install CocoaPods
         run: |
@@ -36,8 +43,16 @@ jobs:
         run: |
           cd ios
           xcodebuild \
-          -workspace EpioneCares.xcworkspace \
-          -scheme EpioneCares \
-          -sdk iphonesimulator \
-          -configuration Release \
-          build
+            -workspace EpioneCares.xcworkspace \
+            -scheme EpioneCares \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -derivedDataPath build \
+            build
+
+      - name: Upload iOS Build Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build-data
+          path: ios/build
