@@ -25,24 +25,41 @@ jobs:
           node-version: 22.16.0
           cache: yarn
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      - name: Create ENV File
+        run: |
+          echo "${{ secrets.ENV_FILES }}" > .env
+
+      - name: Verify ENV File
+        run: |
+          if [ -f .env ]; then
+            echo ".env created"
+          else
+            echo ".env missing"
+            exit 1
+          fi
+
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Install Pods
+      - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Clean Derived Data
-        run: rm -rf ~/Library/Developer/Xcode/DerivedData
-
       - name: Build iOS
+        env:
+          ENVFILE: .env
         run: |
           cd ios
           xcodebuild \
@@ -51,11 +68,12 @@ jobs:
             -sdk iphonesimulator \
             -configuration Release \
             -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
             build
 
       - name: Upload iOS Build Logs
-        if: always()
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-build-data
           path: ios/build

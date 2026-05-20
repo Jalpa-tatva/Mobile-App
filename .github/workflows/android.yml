@@ -33,7 +33,7 @@ jobs:
 
       - name: Create ENV File
         run: |
-          echo "${{ secrets.ENV_FILE }}" > .env
+          echo "${{ secrets.ENV_FILES }}" > .env
 
       - name: Verify ENV File Exists
         run: |
