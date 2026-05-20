@@ -27,7 +27,6 @@ setup_permissions([
    'SpeechRecognition',
 ])
 
-# use_modular_headers!
 
 target 'EpioneCares' do
 
