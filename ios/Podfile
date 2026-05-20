@@ -12,11 +12,10 @@ require Pod::Executable.execute_command(
 
 require_relative '../node_modules/react-native-permissions/scripts/setup'
 
-platform :ios, min_ios_version_supported
+platform :ios, '15.1'
 
 prepare_react_native_project!
 
-# react-native-config ENV support
 ENV['ENVFILE'] = File.join(File.dirname(__dir__), '.env')
 
 setup_permissions([
@@ -28,7 +27,7 @@ setup_permissions([
   'SpeechRecognition',
 ])
 
-# Firebase + RNFirebase support
+# Firebase static framework support
 use_frameworks! :linkage => :static
 
 target 'EpioneCares' do
@@ -36,9 +35,8 @@ target 'EpioneCares' do
 
   # Firebase modular headers
   pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseCoreExtension', :modular_headers => true
-  pod 'FirebaseInstallations', :modular_headers => true
   pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseInstallations', :modular_headers => true
   pod 'GoogleDataTransport', :modular_headers => true
   pod 'nanopb', :modular_headers => true
 
@@ -54,7 +52,6 @@ target 'EpioneCares' do
       :mac_catalyst_enabled => false
     )
 
-    # Xcode 15+ deployment target fix
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
