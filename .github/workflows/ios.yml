@@ -12,8 +12,8 @@ on:
       - mobile_development
 
 jobs:
-  build:
-    runs-on: macos-latest
+  build-ios:
+    runs-on: macos-14
 
     steps:
       - name: Checkout Code
@@ -25,10 +25,14 @@ jobs:
           node-version: 22.16.0
           cache: yarn
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2
+          bundler-cache: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -36,25 +40,18 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Create ENV File
         run: |
           echo "${{ secrets.ENV_FILES }}" > .env
 
-      - name: Verify ENV File
-        run: |
-          if [ -f .env ]; then
-            echo ".env created"
-          else
-            echo ".env missing"
-            exit 1
-          fi
-
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
-
       - name: Install CocoaPods
         run: |
           cd ios
+          pod deintegrate
+          rm -rf Pods Podfile.lock
           pod install --repo-update
 
       - name: Build iOS
@@ -62,18 +59,21 @@ jobs:
           ENVFILE: .env
         run: |
           cd ios
+
           xcodebuild \
             -workspace EpioneCares.xcworkspace \
             -scheme EpioneCares \
             -sdk iphonesimulator \
             -configuration Release \
-            -derivedDataPath build \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Upload iOS Build Logs
+      - name: Upload Build Logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-build-data
-          path: ios/build
+          name: ios-build-logs
+          path: |
+            ios/build
+            ~/Library/Logs/DiagnosticReports
