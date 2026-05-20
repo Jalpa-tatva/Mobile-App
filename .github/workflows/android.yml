@@ -22,27 +22,32 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version-file: package.json
+          node-version: 22
+          cache: yarn
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Install Dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
-      - name: Decode Keystore
+      - name: Decode Android Keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/app/epione-release.keystore
 
       - name: Grant Execute Permission
         run: chmod +x android/gradlew
 
-      - name: Build Android APK
+      - name: Build Android Release APK
         run: |
           cd android
           ./gradlew assembleRelease
 
-       - name: Upload APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
-
-          
