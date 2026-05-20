@@ -4,13 +4,18 @@
 
 <plist version="1.0">
 <dict>
+
     <key>method</key>
     <string>ad-hoc</string>
 
     <key>signingStyle</key>
     <string>manual</string>
 
+    <key>teamID</key>
+    <string>9HQ94SK78R</string>
+
     <key>compileBitcode</key>
     <false/>
+
 </dict>
 </plist>

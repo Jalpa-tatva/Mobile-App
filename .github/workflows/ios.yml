@@ -101,6 +101,8 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath build/EpioneCares.xcarchive \
+            DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} \
+            CODE_SIGN_STYLE=Manual \
             archive
 
           xcodebuild \
