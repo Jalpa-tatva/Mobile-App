@@ -33,16 +33,7 @@ jobs:
 
       - name: Create ENV File
         run: |
-          echo "${{ secrets.ENV_FILES }}" > .env
-
-      - name: Verify ENV File Exists
-        run: |
-          if [ -f .env ]; then
-            echo ".env file created successfully"
-          else
-            echo ".env file missing"
-            exit 1
-          fi
+          echo "${{ secrets.ENV_FILES }}" > .env.production
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
@@ -56,6 +47,7 @@ jobs:
 
       - name: Build Android Release APK
         run: |
+          export ENVFILE=.env.production
           cd android
           ./gradlew assembleRelease
 
