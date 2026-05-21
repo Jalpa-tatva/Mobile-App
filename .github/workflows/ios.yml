@@ -110,7 +110,7 @@ jobs:
           security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision > profile.plist
           cat profile.plist | grep -A 20 DeveloperCertificates
 
-     - name: Build Archive
+      - name: Build Archive
         env:
           ENVFILE: .env.production
         run: |
