@@ -33,22 +33,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>RCTNewArchEnabled</key>
-	<true/>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Epione Cares need your Face ID or fingerprint to securely log in</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Epione Cares needs your permission for upload profile and activity photo</string>
 	<key>NSDocumentsUsageDescription</key>
 	<string>Epione Cares need your permission to save documents.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Epione Cares need your Face ID or fingerprint to securely log in</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Epione Cares need your permission to playing downloaded audio.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -58,7 +48,9 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Epione Cares need your permission to use recognize speech</string>
 	<key>Privacy-Microphone Usage Description</key>
-	<string/>
+	<string></string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntDesign.ttf</string>
@@ -92,6 +84,7 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>bluetooth-peripheral</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
