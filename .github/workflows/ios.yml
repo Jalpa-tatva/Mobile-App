@@ -128,7 +128,7 @@ jobs:
           security cms -D \
             -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
             | grep -A 30 Name
-            
+
       - name: Install xcpretty
         run: gem install xcpretty
 
@@ -158,11 +158,14 @@ jobs:
 
           cd ios
 
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+
           xcodebuild \
             -exportArchive \
             -archivePath build/EpioneCares.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/ipa
+            -exportPath build/ipa \
+            -allowProvisioningUpdates
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
