@@ -109,6 +109,10 @@ jobs:
         run: |
           security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision > profile.plist
           cat profile.plist | grep -A 20 DeveloperCertificates
+          
+      - name: Clean DerivedData
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
 
       - name: Build Archive
         env:
