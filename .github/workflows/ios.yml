@@ -35,7 +35,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.7.6
-          bundler-cache: false
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -46,12 +45,13 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Set NODE_BINARY
-        run: echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-
       - name: Create ENV File
         run: |
           echo "${{ secrets.ENV_FILES }}" > .env.production
+
+      - name: Set NODE_BINARY
+        run: |
+          echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
 
       - name: Install CocoaPods
         run: |
@@ -60,15 +60,15 @@ jobs:
           rm -rf Pods Podfile.lock
           pod install --repo-update
 
-      - name: Install Certificates
+      - name: Install Signing Certificate & Provisioning Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
           P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_MOBILEPROVISION_BASE64 }}
-          KEYCHAIN_PASSWORD: temp_pass
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+          KEYCHAIN_PASSWORD: temp_keychain_password
         run: |
 
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
@@ -86,13 +86,46 @@ jobs:
             -f pkcs12 \
             -k $KEYCHAIN_PATH
 
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          security list-keychain -d user -s $KEYCHAIN_PATH
 
-      - name: Build iOS IPA
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< $(security cms -D -i $PP_PATH))
+
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+
+      - name: Create ExportOptions.plist
+        run: |
+
+          cat > ios/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+
+              <key>signingStyle</key>
+              <string>manual</string>
+
+              <key>stripSwiftSymbols</key>
+              <true/>
+
+              <key>compileBitcode</key>
+              <false/>
+
+              <key>teamID</key>
+              <string>${{ secrets.IOS_TEAM_ID }}</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build Archive
         env:
           ENVFILE: .env.production
         run: |
+
           cd ios
 
           xcodebuild \
@@ -103,23 +136,28 @@ jobs:
             -archivePath build/EpioneCares.xcarchive \
             DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} \
             CODE_SIGN_STYLE=Manual \
-            archive
+            clean archive
+
+      - name: Export IPA
+        run: |
+
+          cd ios
 
           xcodebuild \
             -exportArchive \
             -archivePath build/EpioneCares.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist ExportOptions.plist
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ios-ipa
+          name: EpioneCares-IPA
           path: ios/build/ipa/*.ipa
 
       - name: Upload Build Logs
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build-logs
           path: |
