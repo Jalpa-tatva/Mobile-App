@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - main
-      - mobile_development
+      - mobiledevelopment
 
   pull_request:
     branches:
       - main
-      - mobile_development
+      - mobiledevelopment
 
 jobs:
   build-ios:
@@ -34,7 +34,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.7.6
+          ruby-version: 3.1
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -47,7 +47,7 @@ jobs:
 
       - name: Create ENV File
         run: |
-          echo "${{ secrets.ENV_FILES }}" > .env.production
+          echo "${{ secrets.ENVFILES }}" > .env.production
 
       - name: Set NODE_BINARY
         run: |
@@ -62,65 +62,39 @@ jobs:
 
       - name: Install Signing Certificate & Provisioning Profile
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
-          KEYCHAIN_PASSWORD: temp_keychain_password
+          BUILDCERTIFICATEBASE64: ${{ secrets.IOSP12BASE64 }}
+          P12PASSWORD: ${{ secrets.IOSP12PASSWORD }}
+          BUILDPROVISIONPROFILEBASE64: ${{ secrets.IOSPROVISIONBASE64 }}
+          KEYCHAINPASSWORD: tempkeychainpassword
         run: |
 
           CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          echo -n "$BUILDCERTIFICATEBASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILDPROVISIONPROFILEBASE64" | base64 --decode -o $PROFILE_PATH
 
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$KEYCHAINPASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAINPASSWORD" $KEYCHAIN_PATH
 
           security import $CERTIFICATE_PATH \
-            -P "$P12_PASSWORD" \
+            -P "$P12PASSWORD" \
             -A \
             -t cert \
             -f pkcs12 \
             -k $KEYCHAIN_PATH
 
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH login.keychain-db
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
 
-          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< "$(security cms -D -i $PROFILE_PATH)")
 
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
 
-      - name: Create ExportOptions.plist
-        run: |
-
-          cat > ios/ExportOptions.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-
-              <key>signingStyle</key>
-              <string>manual</string>
-
-              <key>stripSwiftSymbols</key>
-              <true/>
-
-              <key>compileBitcode</key>
-              <false/>
-
-              <key>teamID</key>
-              <string>${{ secrets.IOS_TEAM_ID }}</string>
-          </dict>
-          </plist>
-          EOF
-
+     
       - name: Build Archive
         env:
           ENVFILE: .env.production
@@ -133,9 +107,12 @@ jobs:
             -scheme EpioneCares \
             -configuration Release \
             -sdk iphoneos \
+            -destination generic/platform=iOS \
             -archivePath build/EpioneCares.xcarchive \
-            DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} \
-            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=9HQ94SK78R \
+            PRODUCT_BUNDLE_IDENTIFIER=com.concursive.epionecares \
+            CODE_SIGN_STYLE=Automatic \
+            PROVISIONING_PROFILE_SPECIFIER="iOS Team Provisioning Profile: com.concursive.epionecares" \
             clean archive
 
       - name: Export IPA
