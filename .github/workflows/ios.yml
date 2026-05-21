@@ -152,23 +152,37 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Development" \
             PROVISIONING_PROFILE_SPECIFIER="EpioneCares" \
             clean archive
-      
-      - name: Build Simulator App
-        env:
-          ENVFILE: .env.production
+
+      - name: Bundle React Native JS
         run: |
 
-          cd ios
+          mkdir -p ios/main.jsbundle
 
-          xcodebuild \
-            -workspace EpioneCares.xcworkspace \
-            -scheme EpioneCares \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -derivedDataPath build/simulator \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty
+          npx react-native bundle \
+            --platform ios \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ios/main.jsbundle \
+            --assets-dest ios
+      
+     - name: Build Simulator Release App
+       env:
+        ENVFILE: .env.production
+       run: |
+
+        cd ios
+
+        export ENVFILE=.env.production
+
+        set -o pipefail && xcodebuild \
+          -workspace EpioneCares.xcworkspace \
+          -scheme EpioneCares \
+          -configuration Release \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 16' \
+          -derivedDataPath build/simulator \
+          CODE_SIGNING_ALLOWED=NO \
+          clean build | xcpretty
 
       - name: Upload Simulator App
         uses: actions/upload-artifact@v4
