@@ -289,7 +289,7 @@ export const LoginScreen: React.FC = () => {
       const response = await checkAuthorization(email, password);
       console.log("API URL =>", Config.API_URL);
       console.log("LOGIN RESPONSE =>", response);
-      
+      console.log("Config ===>", Config);
 
       const data = response?.data?.[0]?.objectList?.[0];
       const fcmtoken = await AsyncStorage.getItem("fcmtoken");
