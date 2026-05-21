@@ -58,7 +58,7 @@ jobs:
           cd ios
           pod deintegrate
           rm -rf Pods Podfile.lock
-          pod install --repo-update
+          arch -arm64 pod install --repo-update
 
       - name: Install Signing Certificate & Provisioning Profile
         env:
@@ -113,6 +113,20 @@ jobs:
       - name: Clean DerivedData
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData
+
+    - name: Verify Signing Setup
+      run: |
+
+        echo "==== SIGNING IDENTITIES ===="
+        security find-identity -v -p codesigning
+
+        echo "==== PROFILES ===="
+        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+
+        echo "==== PROFILE DETAILS ===="
+        security cms -D \
+          -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
+          | grep -A 30 Name
 
       - name: Build Archive
         env:
