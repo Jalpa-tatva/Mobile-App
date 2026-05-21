@@ -114,19 +114,19 @@ jobs:
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData
 
-    - name: Verify Signing Setup
-      run: |
+      - name: Verify Signing Setup
+        run: |
 
-        echo "==== SIGNING IDENTITIES ===="
-        security find-identity -v -p codesigning
+          echo "==== SIGNING IDENTITIES ===="
+          security find-identity -v -p codesigning
 
-        echo "==== PROFILES ===="
-        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "==== PROFILES ===="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
-        echo "==== PROFILE DETAILS ===="
-        security cms -D \
-          -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
-          | grep -A 30 Name
+          echo "==== PROFILE DETAILS ===="
+          security cms -D \
+            -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
+            | grep -A 30 Name
 
       - name: Build Archive
         env:
