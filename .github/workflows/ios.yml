@@ -152,6 +152,29 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Development" \
             PROVISIONING_PROFILE_SPECIFIER="EpioneCares" \
             clean archive
+      
+       - name: Build Simulator App
+        env:
+          ENVFILE: .env.production
+        run: |
+
+          cd ios
+
+          xcodebuild \
+            -workspace EpioneCares.xcworkspace \
+            -scheme EpioneCares \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build/simulator \
+            clean build | xcpretty
+
+      - name: Upload Simulator App
+        uses: actions/upload-artifact@v4
+        with:
+          name: EpioneCares-Simulator-App
+          path: ios/build/simulator/Build/Products/Debug-iphonesimulator/*.app
+
 
       - name: Export IPA
         run: |
