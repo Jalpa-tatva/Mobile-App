@@ -109,7 +109,7 @@ jobs:
         run: |
           security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision > profile.plist
           cat profile.plist | grep -A 20 DeveloperCertificates
-          
+
       - name: Clean DerivedData
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData
@@ -130,9 +130,9 @@ jobs:
             -archivePath build/EpioneCares.xcarchive \
             DEVELOPMENT_TEAM=9HQ94SK78R \
             PRODUCT_BUNDLE_IDENTIFIER=com.concursive.epionecares \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Development" \
-            -allowProvisioningUpdates \
+            PROVISIONING_PROFILE_SPECIFIER="EpioneCares" \
             clean archive
 
       - name: Export IPA
