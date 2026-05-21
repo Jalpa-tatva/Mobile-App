@@ -6,10 +6,10 @@
 <dict>
 
     <key>method</key>
-    <string>Ad hoc</string>
+    <string>ad-hoc</string>
 
     <key>signingStyle</key>
-    <string>Automatic</string>
+    <string>automatic</string>
 
     <key>teamID</key>
     <string>9HQ94SK78R</string>

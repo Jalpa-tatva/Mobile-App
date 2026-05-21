@@ -93,8 +93,13 @@ jobs:
           UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< $(security cms -D -i $PP_PATH))
 
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-     
-      - name: Build Archive
+      
+      - name: Debug Code Signing
+        run: |
+          security find-identity -v -p codesigning
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+          
+       - name: Build Archive
         env:
           ENVFILE: .env.production
         run: |
@@ -111,7 +116,7 @@ jobs:
             DEVELOPMENT_TEAM=9HQ94SK78R \
             PRODUCT_BUNDLE_IDENTIFIER=com.concursive.epionecares \
             CODE_SIGN_STYLE=Automatic \
-            PROVISIONING_PROFILE_SPECIFIER="iOS Team Provisioning Profile: com.concursive.epionecares" \
+            -allowProvisioningUpdates \
             clean archive
 
       - name: Export IPA
