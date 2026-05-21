@@ -167,6 +167,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -derivedDataPath build/simulator \
+            CODE_SIGNING_ALLOWED=NO \
             clean build | xcpretty
 
       - name: Upload Simulator App

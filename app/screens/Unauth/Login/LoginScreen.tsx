@@ -287,6 +287,10 @@ export const LoginScreen: React.FC = () => {
 
     try {
       const response = await checkAuthorization(email, password);
+      console.log("API URL =>", Config.API_URL);
+      console.log("LOGIN RESPONSE =>", response);
+      
+
       const data = response?.data?.[0]?.objectList?.[0];
       const fcmtoken = await AsyncStorage.getItem("fcmtoken");
       if (data) {
@@ -344,6 +348,7 @@ export const LoginScreen: React.FC = () => {
         showErrorMessage(I18n.t("signIn.loginError"));
       }
     } catch (error) {
+      console.log("LOGIN ERROR =>", error);
       console.log("error --->", error);
       showErrorMessage(I18n.t("signIn.loginError"));
     } finally {
