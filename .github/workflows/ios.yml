@@ -153,21 +153,21 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="EpioneCares" \
             clean archive
       
-       - name: Build Simulator App
-        env:
-          ENVFILE: .env.production
-        run: |
+      - name: Build Simulator App
+          env:
+            ENVFILE: .env.production
+          run: |
 
-          cd ios
+            cd ios
 
-          xcodebuild \
-            -workspace EpioneCares.xcworkspace \
-            -scheme EpioneCares \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -derivedDataPath build/simulator \
-            clean build | xcpretty
+            xcodebuild \
+              -workspace EpioneCares.xcworkspace \
+              -scheme EpioneCares \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 16' \
+              -derivedDataPath build/simulator \
+              clean build | xcpretty
 
       - name: Upload Simulator App
         uses: actions/upload-artifact@v4
