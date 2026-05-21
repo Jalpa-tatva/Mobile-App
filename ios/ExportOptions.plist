@@ -6,7 +6,7 @@
 <dict>
 
     <key>method</key>
-    <string>ad-hoc</string>
+    <string>Development</string>
 
     <key>signingStyle</key>
     <string>manual</string>
