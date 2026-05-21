@@ -86,20 +86,26 @@ jobs:
             -f pkcs12 \
             -k $KEYCHAIN_PATH
 
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH login.keychain-db
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            $KEYCHAIN_PATH
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
 
-          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< "$(security cms -D -i $PP_PATH)")
 
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-      
+
       - name: Debug Code Signing
         run: |
           security find-identity -v -p codesigning
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
-          
-       - name: Build Archive
+
+      - name: Build Archive
         env:
           ENVFILE: .env.production
         run: |
