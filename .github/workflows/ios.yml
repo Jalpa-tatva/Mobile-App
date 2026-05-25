@@ -186,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: EpioneCares-Simulator-App
-          path: ios/build/simulator/Build/Products/Debug-iphonesimulator/*.app
+          path: ios/build/simulator/Build/Products/Release-iphonesimulator/*.app
 
 
       - name: Export IPA
