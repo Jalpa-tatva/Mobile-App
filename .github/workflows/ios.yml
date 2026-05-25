@@ -159,12 +159,11 @@ jobs:
       - name: Clean Old Bundle
         run: |
           rm -rf ios/main.jsbundle
+          
       - name: Bundle React Native JS
-        run: |
-
         env:
           ENVFILE: .env.production
-
+        run: |
           export ENVFILE=.env.production
 
           npx react-native bundle \
