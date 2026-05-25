@@ -14,6 +14,8 @@ on:
 jobs:
   build-ios:
     runs-on: macos-14
+    env:
+      ENVFILE: .env.production
 
     steps:
       - name: Checkout Code
@@ -47,7 +49,9 @@ jobs:
 
       - name: Create ENV File
         run: |
-          echo "${{ secrets.ENVFILES }}" > .env.production
+          cat <<EOF > .env.production
+          ${{ secrets.ENV_FILES }}
+          EOF
 
       - name: Set NODE_BINARY
         run: |
@@ -136,7 +140,7 @@ jobs:
         env:
           ENVFILE: .env.production
         run: |
-
+          export ENVFILE=.env.production
           cd ios
 
           xcodebuild \
@@ -158,6 +162,11 @@ jobs:
       - name: Bundle React Native JS
         run: |
 
+        env:
+          ENVFILE: .env.production
+
+          export ENVFILE=.env.production
+
           npx react-native bundle \
             --platform ios \
             --dev false \
@@ -170,6 +179,7 @@ jobs:
           ENVFILE: .env.production
         run: |
 
+          export ENVFILE=.env.production
           cd ios
 
           xcodebuild \
