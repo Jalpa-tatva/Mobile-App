@@ -544,6 +544,9 @@ export const LoginScreen: React.FC = () => {
                 : `${translate("signIn.loginToApp")}`
             }`}</Text>
           </View>
+          <Text>{Config?.BASE_URL}</Text>
+          <Text>{Config?.AUTH_KEY}</Text>
+          <Text>{Config?.REALM}</Text>
 
           <Formik
             validationSchema={validationSchema}

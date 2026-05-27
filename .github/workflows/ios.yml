@@ -53,6 +53,11 @@ jobs:
           ${{ secrets.ENV_FILES }}
           EOF
 
+      - name: Debug ENV File
+        run: |
+          echo "===== .env.production ====="
+          cat .env.production
+
       - name: Set NODE_BINARY
         run: |
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
@@ -172,6 +177,21 @@ jobs:
             --entry-file index.js \
             --bundle-output ios/main.jsbundle \
             --assets-dest ios
+            
+      - name: Verify ENVFILE
+        run: |
+          echo $ENVFILE
+
+      - name: Debug React Native Config
+        env:
+          ENVFILE: .env.production
+        run: |
+          export ENVFILE=.env.production
+
+          node -e "
+            console.log('ENVFILE:', process.env.ENVFILE)
+            const fs = require('fs')
+            console.log(fs.readFileSync('.env.production', 'utf8'))
       
       - name: Build Simulator Release App
         env:
