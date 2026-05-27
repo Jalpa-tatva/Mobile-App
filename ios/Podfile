@@ -32,6 +32,7 @@ target 'EpioneCares' do
 
   config = use_native_modules!
   permissions_path = '../node_modules/react-native-permissions/ios' 
+  pod 'react-native-config', :path => '../node_modules/react-native-config'
   pod 'FirebaseCore', :modular_headers => true
   pod 'FirebaseCoreExtension', :modular_headers => true
   pod 'FirebaseInstallations', :modular_headers => true

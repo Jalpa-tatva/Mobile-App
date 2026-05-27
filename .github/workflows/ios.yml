@@ -53,6 +53,10 @@ jobs:
           ${{ secrets.ENV_FILES }}
           EOF
 
+      - name: Verify ENV
+        run: |
+          cat .env.production
+          
       - name: Debug ENV File
         run: |
           echo "===== .env.production ====="
@@ -61,6 +65,7 @@ jobs:
       - name: Set NODE_BINARY
         run: |
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
+
 
       - name: Install CocoaPods
         run: |
@@ -141,6 +146,19 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
+      - name: Bundle React Native JS
+        env:
+          ENVFILE: .env.production
+        run: |
+          export ENVFILE=.env.production
+
+          npx react-native bundle \
+            --platform ios \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ios/main.jsbundle \
+            --assets-dest ios
+
       - name: Build Archive
         env:
           ENVFILE: .env.production
@@ -164,23 +182,6 @@ jobs:
       - name: Clean Old Bundle
         run: |
           rm -rf ios/main.jsbundle
-          
-      - name: Bundle React Native JS
-        env:
-          ENVFILE: .env.production
-        run: |
-          export ENVFILE=.env.production
-
-          npx react-native bundle \
-            --platform ios \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output ios/main.jsbundle \
-            --assets-dest ios
-
-      - name: Verify ENVFILE
-        run: |
-          echo $ENVFILE
 
       - name: Debug React Native Config
         env:
