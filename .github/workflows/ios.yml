@@ -177,7 +177,7 @@ jobs:
             --entry-file index.js \
             --bundle-output ios/main.jsbundle \
             --assets-dest ios
-            
+
       - name: Verify ENVFILE
         run: |
           echo $ENVFILE
@@ -188,10 +188,9 @@ jobs:
         run: |
           export ENVFILE=.env.production
 
-          node -e "
-            console.log('ENVFILE:', process.env.ENVFILE)
-            const fs = require('fs')
-            console.log(fs.readFileSync('.env.production', 'utf8'))
+          echo "ENVFILE=$ENVFILE"
+
+          cat .env.production
       
       - name: Build Simulator Release App
         env:
