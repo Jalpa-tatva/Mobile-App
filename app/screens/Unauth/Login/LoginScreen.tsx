@@ -8,7 +8,7 @@ import {
   StatusBar,
   TextInput,
   Platform,
-  Image,
+  Image,Alert
 } from "react-native";
 
 // External libraries
@@ -284,16 +284,23 @@ export const LoginScreen: React.FC = () => {
     biometric?: any
   ) => {
     !biometric && setIsLoader(true);
-
+  
     try {
+      Alert.alert("1", "LOGIN START");
+  
       const response = await checkAuthorization(email, password);
-      console.log("API URL =>", Config.API_URL);
-      console.log("LOGIN RESPONSE =>", response);
-      console.log("Config ===>", Config);
-
+  
+      Alert.alert("2", "API SUCCESS");
+  
       const data = response?.data?.[0]?.objectList?.[0];
-      const fcmtoken = await AsyncStorage.getItem("fcmtoken");
+  
       if (data) {
+        Alert.alert("3", "DATA FOUND");
+  
+        const fcmtoken = await AsyncStorage.getItem("fcmtoken");
+  
+        Alert.alert("4", `FCM => ${fcmtoken}`);
+  
         const userData = {
           email,
           password,
@@ -302,55 +309,56 @@ export const LoginScreen: React.FC = () => {
           userImageUrl: data?.userImageUrl,
           user_name: data?.userName,
         };
-
-        const loginUser = {
-          email: email,
-          password: password,
-        };
-
-        saveString("@LoginUser", JSON.stringify(loginUser));
+  
         dispatches(loginDetail(userData));
-
+  
+        Alert.alert("5", "DISPATCH DONE");
+  
         const tokenData = {
           uniqueId: data.userUniqueId,
           token: fcmtoken,
           type: "Login",
         };
-
+  
         const tokenResponse = await saveDeviceToken(tokenData);
-        if (tokenResponse?.data?.length > 0) {
-          console.log("Token saved successfully");
-        } else {
-          console.log("Error saving token");
-        }
-        /// const alreadyAsked = await hasShownBiometricPrompt();
-        /// const biometricCreds = await getCredentials();
-
+  
+        Alert.alert("6", "TOKEN API DONE");
+  
         const { available } = await checkBiometricAvailability();
-        console.log("AVAILABLE BIOMETRIC", available);
-
+  
+        Alert.alert("7", `BIOMETRIC => ${available}`);
+  
         const biometricData = {
-          available: available,
-          email: email,
-          password: password,
+          available,
+          email,
+          password,
           user_name: data.userName,
           user_id: data.userUniqueId,
           device_id: deviceId,
           platform: Platform.OS,
         };
-
+  
+        Alert.alert("8", "BEFORE SAVE IDENTIFIER");
+  
         await saveUserIdentifier(biometricData);
-
-        saveBiometric(biometricData);
-
-        /// navigation.replace(STACK.RootStack);
+  
+        Alert.alert("9", "AFTER SAVE IDENTIFIER");
+  
+        await saveBiometric(biometricData);
+  
+        Alert.alert("10", "AFTER SAVE BIOMETRIC");
+  
+        navigation.replace(STACK.RootStack);
+  
+        Alert.alert("11", "NAVIGATION DONE");
       } else {
-        showErrorMessage(I18n.t("signIn.loginError"));
+        Alert.alert("ERROR", "NO DATA FOUND");
       }
     } catch (error) {
-      console.log("LOGIN ERROR =>", error);
-      console.log("error --->", error);
-      showErrorMessage(I18n.t("signIn.loginError"));
+      Alert.alert(
+        "LOGIN ERROR",
+        JSON.stringify(error, null, 2)
+      );
     } finally {
       setIsLoader(false);
     }
